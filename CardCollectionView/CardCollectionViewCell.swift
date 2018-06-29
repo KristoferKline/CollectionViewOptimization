@@ -13,6 +13,10 @@ final class CardCollectionViewCell: UICollectionViewCell {
     
     let previewImageView = UIImageView()
     
+    override func prepareForReuse() {
+        previewImageView.image = nil
+    }
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         

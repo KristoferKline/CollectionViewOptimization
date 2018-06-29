@@ -12,7 +12,6 @@ class MainViewController: UIViewController {
     
     var cardCollectionView: UICollectionView!
     let layout = CardCollectionViewLayout()
-    let options: [UIColor] = [.red, .orange, .yellow, .green, .blue, .purple]
     var imageSource = [UIImage?]() {
         didSet { cardCollectionView.reloadData() }
     }
@@ -25,10 +24,6 @@ class MainViewController: UIViewController {
         constrainViews()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-    }
-    
     private func configure() {
         view.backgroundColor = .white
         
@@ -37,10 +32,6 @@ class MainViewController: UIViewController {
         cardCollectionView.backgroundColor = .clear
         cardCollectionView.delegate = self
         cardCollectionView.dataSource = self
-        cardCollectionView.contentInset = UIEdgeInsets.init(top: 0,
-                                                            left: layout.itemSpacing,
-                                                            bottom: 0,
-                                                            right: layout.itemSpacing)
         
         cardCollectionView.register(CardCollectionViewCell.self,
                                     forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
@@ -60,9 +51,25 @@ class MainViewController: UIViewController {
         let randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")!
         URLSession.shared.dataTask(with: randomImageURL) { (data, response, error) in
             guard let data = data, error == nil else { return print(error!.localizedDescription) }
-            guard let image = UIImage(data: data) else { return print("Failed to convert data to image!") }
+            let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+            guard let imageSource = CGImageSourceCreateWithData(data as NSData, imageSourceOptions) else {
+                return print("Failed to create image source from data")
+            }
+            let downsapleOptions = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                
+            ] as CFDictionary
+            
+            guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsapleOptions) else {
+                return print("Failed to craete downsampled image.")
+            }
+            
+//            guard let image = UIImage(data: data) else { return print("Failed to convert data to image!") }
             DispatchQueue.main.async { [unowned self] in
-                self.imageSource.append(image)
+                self.imageSource.append(UIImage(cgImage: downsampledImage))
+//                self.imageSource.append(image)
             }
         }.resume()
     }
