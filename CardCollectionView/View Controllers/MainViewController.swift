@@ -10,8 +10,11 @@ import UIKit
 
 class MainViewController: UIViewController {
     
-    var cardCollectionView: UICollectionView!
-    let layout = CardCollectionViewLayout()
+    private var cardCollectionView: UICollectionView!
+    private let layout = CardCollectionViewLayout()
+    private var transition: CardAnimator!
+    private var operation: UINavigationController.Operation!
+    
     var imageSource = [UIImage?]() {
         didSet { cardCollectionView.reloadData() }
     }
@@ -76,8 +79,8 @@ class MainViewController: UIViewController {
     
     private func constrainViews() {
         let marginGuide = view.safeAreaLayoutGuide
-        cardCollectionView.leadingAnchor.constraint(equalTo: marginGuide.leadingAnchor).isActive = true
-        cardCollectionView.trailingAnchor.constraint(equalTo: marginGuide.trailingAnchor).isActive = true
+        cardCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        cardCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         cardCollectionView.topAnchor.constraint(equalTo: marginGuide.topAnchor).isActive = true
         cardCollectionView.bottomAnchor.constraint(equalTo: marginGuide.bottomAnchor).isActive = true
     }
@@ -100,14 +103,67 @@ extension MainViewController: UICollectionViewDataSource {
     }
 }
 
+// MARK: - Collection View Delegate Methods
 extension MainViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.scrollToItem(at: indexPath,
                                     at: .centeredHorizontally,
                                     animated: true)
+        
+        let previewViewController = CardPreviewViewController()
+        previewViewController.transitioningDelegate = self
+        present(previewViewController, animated: true, completion: nil)
     }
 }
 
-extension MainViewController: UIScrollViewDelegate {
+// MARK: - Navigation Controller Animation Delegate
+extension MainViewController: UINavigationControllerDelegate {
+    func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationController.Operation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        self.operation = operation
+        return self
+    }
     
+    func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+        return self
+    }
+}
+
+// MARK: - Transition Animations
+extension MainViewController: UIViewControllerInteractiveTransitioning {
+    func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
+        transition = CardAnimator(operation: operation,
+                                  context: transitionContext)
+    }
+}
+
+extension MainViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return transition
+    }
+
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        return nil
+    }
+}
+
+extension MainViewController: UIViewControllerAnimatedTransitioning {
+    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
+        return transition.duration
+    }
+    
+    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
+        let containerView = transitionContext.containerView
+        let toView = transitionContext.view(forKey: .to)!
+        
+        containerView.addSubview(toView)
+        
+    }
+    
+    func animationEnded(_ transitionCompleted: Bool) {
+        print(#function)
+    }
+    
+    func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
+        return transition
+    }
 }

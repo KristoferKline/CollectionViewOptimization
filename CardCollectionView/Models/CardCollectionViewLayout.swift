@@ -29,6 +29,7 @@ final class CardCollectionViewLayout: UICollectionViewFlowLayout {
         itemSize = CGSize(width: min(itemWidth, maxWidth), height: collectionView.bounds.height)
         
         let contentInset = (collectionView.bounds.width / 2) - itemSize.width / 2
+        
         collectionView.contentInset = UIEdgeInsets(top: 0,
                                                    left: contentInset,
                                                    bottom: 0,
