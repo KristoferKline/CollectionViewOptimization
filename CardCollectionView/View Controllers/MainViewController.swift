@@ -63,11 +63,33 @@ final class MainViewController: UIViewController {
         let width = view.bounds.width
         let height = view.bounds.height
         randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")
+        
+        let startingIndexPaths = (0 ..< imageCount).map { IndexPath(row: $0, section: 0) }
+        beginLoadingImages(for: startingIndexPaths)
+    }
+    
+    private func beginLoadingImages(for indexPaths: [IndexPath]) {
+        indexPaths.forEach { indexPath in
+            guard imageOperations[indexPath] == nil else { return }
+            print("Added prefetch operation: \(indexPath.row)")
+            let loadImage = LoadImageOperation(url: randomImageURL!, session: session) { [weak self] (image) in
+                guard let strongSelf = self else { return }
+                strongSelf.imageSource.append(image)
+                strongSelf.collectionView(strongSelf.cardCollectionView,
+                                          load: image,
+                                          atIndexPathIfVisible: indexPath)
+            }
+            imageOperations[indexPath] = loadImage
+            loadImageQueue.addOperation(loadImage)
+        }
     }
     
     private func collectionView(_ collectionView: UICollectionView, load image: UIImage, atIndexPathIfVisible indexPath: IndexPath) {
         DispatchQueue.main.async {
-            guard collectionView.indexPathsForVisibleItems.contains(indexPath) else { return }
+            guard collectionView.indexPathsForVisibleItems.contains(indexPath) else {
+                print("Visible Items: \(collectionView.indexPathsForVisibleItems). Trying for: \(indexPath)")
+                return
+            }
             let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: CardCollectionViewCell.identifier,
                 for: indexPath) as! CardCollectionViewCell
@@ -155,15 +177,8 @@ extension MainViewController: URLSessionDataDelegate {
 
 extension MainViewController: UICollectionViewDataSourcePrefetching {
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-        indexPaths.forEach { indexPath in
-            guard imageOperations[indexPath] == nil && indexPath.row < (imageSource.count - 5) else { return }
-            print("Added prefetch operation: \(indexPath.row)")
-            let loadImage = LoadImageOperation(url: randomImageURL!, session: session) { [weak self] (image) in
-                self?.loadImageIfVisible(image, at: indexPath)
-            }
-            imageOperations[indexPath] = loadImage
-            loadImageQueue.addOperation(loadImage)
-        }
+        guard let lastIndex = indexPaths.last, lastIndex.row > (imageSource.count - 5) else { return }
+        beginLoadingImages(for: indexPaths)
     }
     
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
