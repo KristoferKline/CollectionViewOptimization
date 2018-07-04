@@ -8,9 +8,8 @@
 
 import UIKit
 
-final class MainViewController: UIViewController {
+final class MainViewController: UICollectionViewController {
     
-    private var cardCollectionView: UICollectionView!
     private let layout = CardCollectionViewLayout()
     private var operation: UINavigationController.Operation!
     private var selectedImageFrame = CGRect()
@@ -23,6 +22,8 @@ final class MainViewController: UIViewController {
     
     var imageSource = [UIImage?]() {
         didSet { DispatchQueue.main.async { self.cardCollectionView.reloadData() } }
+    init() {
+        super.init(collectionViewLayout: layout)
     }
     
     private lazy var session: URLSession = {
@@ -32,12 +33,13 @@ final class MainViewController: UIViewController {
                           delegate: self,
                           delegateQueue: nil)
     }()
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        loadImageQueue.qualityOfService = .userInitiated
-        loadImageQueue.maxConcurrentOperationCount = 10
+        
         populateData()
         configure()
         constrainViews()
@@ -45,61 +47,29 @@ final class MainViewController: UIViewController {
     
     private func configure() {
         view.backgroundColor = .white
+        title = "Browse"
+        navigationController?.navigationBar.prefersLargeTitles = true
         
-        cardCollectionView = UICollectionView(frame: view.frame, collectionViewLayout: layout)
-        cardCollectionView.translatesAutoresizingMaskIntoConstraints = false
-        cardCollectionView.backgroundColor = .clear
-        cardCollectionView.delegate = self
-        cardCollectionView.prefetchDataSource = self
-        cardCollectionView.dataSource = self
+        collectionView.backgroundColor = .white
+        collectionView.dataSource = dataSource
+        collectionView.delegate = self
+        collectionView.prefetchDataSource = dataSource
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
         
-        cardCollectionView.register(CardCollectionViewCell.self,
-                                    forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
-        
-        view.addSubview(cardCollectionView)
+        collectionView.register(CardCollectionViewCell.self,
+                                forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
     }
     
     private func populateData() {
         let width = view.bounds.width
         let height = view.bounds.height
-        randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")
+        let randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")!
         
-        let startingIndexPaths = (0 ..< imageCount).map { IndexPath(row: $0, section: 0) }
-        beginLoadingImages(for: startingIndexPaths)
-    }
-    
-    private func beginLoadingImages(for indexPaths: [IndexPath]) {
-        indexPaths.forEach { indexPath in
-            guard imageOperations[indexPath] == nil else { return }
-            print("Added prefetch operation: \(indexPath.row)")
-            let loadImage = LoadImageOperation(url: randomImageURL!, session: session) { [weak self] (image) in
-                guard let strongSelf = self else { return }
-                strongSelf.imageSource.append(image)
-                strongSelf.collectionView(strongSelf.cardCollectionView,
-                                          load: image,
-                                          atIndexPathIfVisible: indexPath)
-            }
-            imageOperations[indexPath] = loadImage
-            loadImageQueue.addOperation(loadImage)
-        }
-    }
-    
-    private func collectionView(_ collectionView: UICollectionView, load image: UIImage, atIndexPathIfVisible indexPath: IndexPath) {
-        DispatchQueue.main.async {
-            guard collectionView.indexPathsForVisibleItems.contains(indexPath) else {
-                print("Visible Items: \(collectionView.indexPathsForVisibleItems). Trying for: \(indexPath)")
-                return
-            }
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: CardCollectionViewCell.identifier,
-                for: indexPath) as! CardCollectionViewCell
-            cell.previewImageView.image = image
-        }
-    }
-    
-    private func fetchImages() {
-        let task = session.dataTask(with: randomImageURL!)
-        task.resume()
+        dataSource = CardCollectionViewDataSource(qos: .userInitiated,
+                                                  imageSourceURL: randomImageURL)
+        
+        let startingIndexPaths = (0 ..< 15).map { IndexPath(row: $0, section: 0) }
+        dataSource.collectionView(collectionView, createOperationsFor: startingIndexPaths)
     }
     
     private func constrainViews() {
@@ -129,6 +99,10 @@ extension MainViewController: UICollectionViewDataSource {
         }
         
         return cell
+        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
+        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
+        collectionView.topAnchor.constraint(equalTo: marginGuide.topAnchor).isActive = true
+        collectionView.bottomAnchor.constraint(equalTo: marginGuide.bottomAnchor).isActive = true
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -140,9 +114,7 @@ extension MainViewController: UICollectionViewDataSource {
     }
 }
 
-// MARK: - Collection View Delegate Methods
-extension MainViewController: UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.scrollToItem(at: indexPath,
                                     at: .centeredHorizontally,
                                     animated: true)
