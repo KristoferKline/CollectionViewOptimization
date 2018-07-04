@@ -29,6 +29,6 @@ final class SimpleAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         let finalFrame = transitionContext.finalFrame(for: to)
         
         snapShot.frame = originFrame
-        snapShot.
+//        snapShot.
     }
 }

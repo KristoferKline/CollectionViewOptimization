@@ -8,20 +8,36 @@
 
 import UIKit
 
-class MainViewController: UIViewController {
+final class MainViewController: UIViewController {
     
     private var cardCollectionView: UICollectionView!
     private let layout = CardCollectionViewLayout()
-    private var transition: CardAnimator!
     private var operation: UINavigationController.Operation!
+    private var selectedImageFrame = CGRect()
+    
+    private let loadImageQueue = OperationQueue()
+    private var imageOperations = [IndexPath: LoadImageOperation]()
+    private var randomImageURL: URL?
+    
+    var imageCount: Int = 15
     
     var imageSource = [UIImage?]() {
-        didSet { cardCollectionView.reloadData() }
+        didSet { DispatchQueue.main.async { self.cardCollectionView.reloadData() } }
     }
+    
+    private lazy var session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = true
+        return URLSession(configuration: configuration,
+                          delegate: self,
+                          delegateQueue: nil)
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        loadImageQueue.qualityOfService = .userInitiated
+        loadImageQueue.maxConcurrentOperationCount = 10
         populateData()
         configure()
         constrainViews()
@@ -34,6 +50,7 @@ class MainViewController: UIViewController {
         cardCollectionView.translatesAutoresizingMaskIntoConstraints = false
         cardCollectionView.backgroundColor = .clear
         cardCollectionView.delegate = self
+        cardCollectionView.prefetchDataSource = self
         cardCollectionView.dataSource = self
         
         cardCollectionView.register(CardCollectionViewCell.self,
@@ -43,38 +60,24 @@ class MainViewController: UIViewController {
     }
     
     private func populateData() {
-        for _ in 0...100 {
-            fetchImage()
+        let width = view.bounds.width
+        let height = view.bounds.height
+        randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")
+    }
+    
+    private func collectionView(_ collectionView: UICollectionView, load image: UIImage, atIndexPathIfVisible indexPath: IndexPath) {
+        DispatchQueue.main.async {
+            guard collectionView.indexPathsForVisibleItems.contains(indexPath) else { return }
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: CardCollectionViewCell.identifier,
+                for: indexPath) as! CardCollectionViewCell
+            cell.previewImageView.image = image
         }
     }
     
-    private func fetchImage() {
-        let width = view.bounds.width
-        let height = view.bounds.height
-        let randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")!
-        URLSession.shared.dataTask(with: randomImageURL) { (data, response, error) in
-            guard let data = data, error == nil else { return print(error!.localizedDescription) }
-            let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-            guard let imageSource = CGImageSourceCreateWithData(data as NSData, imageSourceOptions) else {
-                return print("Failed to create image source from data")
-            }
-            let downsapleOptions = [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceShouldCacheImmediately: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                
-            ] as CFDictionary
-            
-            guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsapleOptions) else {
-                return print("Failed to craete downsampled image.")
-            }
-            
-//            guard let image = UIImage(data: data) else { return print("Failed to convert data to image!") }
-            DispatchQueue.main.async { [unowned self] in
-                self.imageSource.append(UIImage(cgImage: downsampledImage))
-//                self.imageSource.append(image)
-            }
-        }.resume()
+    private func fetchImages() {
+        let task = session.dataTask(with: randomImageURL!)
+        task.resume()
     }
     
     private func constrainViews() {
@@ -90,12 +93,24 @@ extension MainViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CardCollectionViewCell.identifier,
                                                       for: indexPath) as! CardCollectionViewCell
-        cell.previewImageView.image = imageSource[indexPath.row]
+        
+        if imageSource.count > indexPath.row {
+            cell.previewImageView.image = imageSource[indexPath.row]
+        }
+        
+        if imageCount - indexPath.row < 5 {
+            let nextIndexPaths = (0 ..< 5).map {
+                IndexPath(row: imageCount + $0, section: 0)
+            }
+            imageCount += 5
+            cardCollectionView.insertItems(at: nextIndexPaths)
+        }
+        
         return cell
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return imageSource.count
+        return imageCount
     }
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
@@ -109,61 +124,53 @@ extension MainViewController: UICollectionViewDelegate {
         collectionView.scrollToItem(at: indexPath,
                                     at: .centeredHorizontally,
                                     animated: true)
+    }
+}
+
+extension MainViewController: URLSessionDataDelegate {
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let imageSource = CGImageSourceCreateWithData(data as NSData, imageSourceOptions) else {
+            return print("Failed to create image source from data")
+        }
         
-        let previewViewController = CardPreviewViewController()
-        previewViewController.transitioningDelegate = self
-        present(previewViewController, animated: true, completion: nil)
-    }
-}
-
-// MARK: - Navigation Controller Animation Delegate
-extension MainViewController: UINavigationControllerDelegate {
-    func navigationController(_ navigationController: UINavigationController, animationControllerFor operation: UINavigationController.Operation, from fromVC: UIViewController, to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        self.operation = operation
-        return self
-    }
-    
-    func navigationController(_ navigationController: UINavigationController, interactionControllerFor animationController: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
-        return self
-    }
-}
-
-// MARK: - Transition Animations
-extension MainViewController: UIViewControllerInteractiveTransitioning {
-    func startInteractiveTransition(_ transitionContext: UIViewControllerContextTransitioning) {
-        transition = CardAnimator(operation: operation,
-                                  context: transitionContext)
-    }
-}
-
-extension MainViewController: UIViewControllerTransitioningDelegate {
-    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        return transition
-    }
-
-    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
-        return nil
-    }
-}
-
-extension MainViewController: UIViewControllerAnimatedTransitioning {
-    func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        return transition.duration
-    }
-    
-    func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
-        let containerView = transitionContext.containerView
-        let toView = transitionContext.view(forKey: .to)!
+        let downsapleOptions = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                kCGImageSourceShouldCacheImmediately: true,
+                                kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary
         
-        containerView.addSubview(toView)
+        guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsapleOptions) else {
+            return print("Failed to craete downsampled image.")
+        }
         
+        DispatchQueue.global(qos: .userInitiated).async { [unowned self] in
+            self.imageSource.append(UIImage(cgImage: downsampledImage))
+        }
     }
     
-    func animationEnded(_ transitionCompleted: Bool) {
-        print(#function)
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let error = error else { return }
+        print("Session ran into an error: \(error.localizedDescription)")
+    }
+}
+
+extension MainViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        indexPaths.forEach { indexPath in
+            guard imageOperations[indexPath] == nil && indexPath.row < (imageSource.count - 5) else { return }
+            print("Added prefetch operation: \(indexPath.row)")
+            let loadImage = LoadImageOperation(url: randomImageURL!, session: session) { [weak self] (image) in
+                self?.loadImageIfVisible(image, at: indexPath)
+            }
+            imageOperations[indexPath] = loadImage
+            loadImageQueue.addOperation(loadImage)
+        }
     }
     
-    func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
-        return transition
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        indexPaths.forEach {
+            print("Did cancel prefetch for: \($0.row)")
+            let operation = imageOperations.removeValue(forKey: $0)
+            operation?.cancel()
+        }
     }
 }
