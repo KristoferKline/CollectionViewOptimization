@@ -9,8 +9,8 @@
 import UIKit
 
 final class CardCollectionViewLayout: UICollectionViewFlowLayout {
-    let itemsPerRow: CGFloat = 1
-    let itemSpacing: CGFloat = 20
+    let itemsPerRow: CGFloat = 2
+    let itemSpacing: CGFloat = 5
     let maxWidth: CGFloat = 150
     
     override func prepare() {
@@ -31,8 +31,8 @@ final class CardCollectionViewLayout: UICollectionViewFlowLayout {
         let contentInset = (collectionView.bounds.width / 2) - itemSize.width / 2
         
         collectionView.contentInset = UIEdgeInsets(top: 0,
-                                                   left: contentInset,
+                                                   left: itemSpacing,
                                                    bottom: 0,
-                                                   right: contentInset)
+                                                   right: itemSpacing)
     }
 }

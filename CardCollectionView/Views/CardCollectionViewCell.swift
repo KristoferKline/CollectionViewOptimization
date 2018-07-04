@@ -24,7 +24,7 @@ final class CardCollectionViewCell: UICollectionViewCell {
         previewImageView.contentMode = .scaleAspectFill
         previewImageView.clipsToBounds = true
         previewImageView.layer.cornerRadius = 10
-        previewImageView.backgroundColor = .red
+        previewImageView.backgroundColor = .lightGray
         contentView.addSubview(previewImageView)
         
         previewImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor).isActive = true
