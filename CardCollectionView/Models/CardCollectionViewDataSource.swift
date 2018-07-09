@@ -12,8 +12,7 @@ typealias Object = NSObject
 final class CardCollectionViewDataSource: Object, UICollectionViewDataSource {
     
     var imageCount: Int = 15
-    var imageSource = [UIImage]()
-    var dataSource = [UIImage]()
+    var loadingIndices = Set<IndexPath>()
     var loadedImages = [IndexPath: UIImage]()
     
     private let loadImageQueue = OperationQueue()
@@ -46,14 +45,13 @@ final class CardCollectionViewDataSource: Object, UICollectionViewDataSource {
                           delegateQueue: nil)
     }()
     
-    func createImages(for indexPaths: [IndexPath], collectionView: UICollectionView) {
-        indexPaths.forEach { indexPath in
-            self.loadData(from: self.randomImageURL) { (data, error) in
-                guard let data = data, error == nil else {
-                    return print("Failed to get image data: \(error!.localizedDescription)")
-                }
-                self.buildImage(from: data, indexPath: indexPath, collectionView: collectionView)
+    func createImage(for indexPath: IndexPath, collectionView: UICollectionView) {
+        loadingIndices.insert(indexPath)
+        loadData(from: randomImageURL) { (data, error) in
+            guard let data = data, error == nil else {
+                return print("Failed to get image data: \(error!.localizedDescription)")
             }
+            self.buildImage(from: data, indexPath: indexPath, collectionView: collectionView)
         }
     }
     
@@ -70,20 +68,21 @@ final class CardCollectionViewDataSource: Object, UICollectionViewDataSource {
     private func buildImage(from data: Data, indexPath: IndexPath, collectionView: UICollectionView) {
         imageQueue.async { [weak self] in
             guard let image = UIImage.createCachedThumbnail(with: data) else { return }
-            print("Did build image")
             self?.loadedImages[indexPath] = image
+            print("Did build image: \(indexPath.row): \(self!.loadedImages.count) images loaded")
             self?.collectionView(collectionView, loadIfVisible: indexPath)
         }
     }
     
-    func collectionView(_ collectionView: UICollectionView,
-                        cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: CardCollectionViewCell.identifier,
                                                       for: indexPath) as! CardCollectionViewCell
         
         guard let image = loadedImages[indexPath] else {
-            createImages(for: [indexPath], collectionView: collectionView)
+            if !loadingIndices.contains(indexPath) {
+                createImage(for: indexPath, collectionView: collectionView)
+            }
             return cell
         }
         
@@ -92,63 +91,24 @@ final class CardCollectionViewDataSource: Object, UICollectionViewDataSource {
         if (imageCount - indexPath.row) < 5 {
             let nextIndexPaths = (0 ..< 5).map { IndexPath(row: imageCount + $0, section: 0) }
             imageCount += 5
-//            self.collectionView(collectionView, createOperationsFor: nextIndexPaths)
-            createImages(for: nextIndexPaths, collectionView: collectionView)
+            nextIndexPaths.forEach { self.createImage(for: $0, collectionView: collectionView) }
             collectionView.insertItems(at: nextIndexPaths)
         }
         
         return cell
     }
     
-    func collectionView(_ collectionView: UICollectionView,
-                        numberOfItemsInSection section: Int) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return imageCount
     }
-    
-//    func collectionView(_ collectionView: UICollectionView,
-//                        createOperationsFor indexPaths: [IndexPath]) {
-//        indexPaths.forEach { indexPath in
-//            print("Going to create opreation for: \(indexPath)")
-//            guard imageOperations[indexPath] == nil else { return }
-//            let loadImage = LoadImageOperation(url: randomImageURL, session: session) { [weak self] (data) in
-//                guard let image = UIImage.createCachedThumbnail(with: data) else { return }
-//                self?.dataSource.append(image)
-//                self?.collectionView(collectionView,
-//                                          loadIfVisible: indexPath)
-//            }
-//            imageOperations[indexPath] = loadImage
-//            loadImageQueue.addOperation(loadImage)
-//        }
-//    }
-    
+
     private func collectionView(_ collectionView: UICollectionView,
                                 loadIfVisible indexPath: IndexPath) {
         DispatchQueue.main.async { [weak self] in
             guard let strongSelf = self else { return }
             guard collectionView.indexPathsForVisibleItems.contains(indexPath) else { return }
-            
-            let cellImage = strongSelf.loadedImages[indexPath] ?? strongSelf.dataSource.removeFirst()
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: CardCollectionViewCell.identifier,
-                for: indexPath) as! CardCollectionViewCell
-            cell.previewImageView.image = cellImage
+            guard strongSelf.loadedImages.keys.contains(indexPath) else { return }
+            collectionView.reloadItems(at: [indexPath])
         }
     }
 }
-
-//extension CardCollectionViewDataSource: UICollectionViewDataSourcePrefetching {
-//    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
-//        indexPaths.forEach { (indexPath) in
-//            guard !loadedImages.keys.contains(indexPath), !dataSource.isEmpty else { return }
-//            loadedImages[indexPath] = dataSource.removeFirst()
-//        }
-//    }
-//
-//    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
-//        indexPaths.forEach {
-//            let operation = imageOperations.removeValue(forKey: $0)
-//            operation?.cancel()
-//        }
-//    }
-//}
-

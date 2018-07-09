@@ -29,8 +29,8 @@ final class CardCollectionViewCell: UICollectionViewCell {
         
         previewImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor).isActive = true
         previewImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor).isActive = true
-        previewImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40).isActive = true
-        previewImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20).isActive = true
+        previewImageView.topAnchor.constraint(equalTo: contentView.topAnchor).isActive = true
+        previewImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor).isActive = true
     }
     
     required init?(coder aDecoder: NSCoder) {

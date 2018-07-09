@@ -9,9 +9,10 @@
 import UIKit
 
 final class CardCollectionViewLayout: UICollectionViewFlowLayout {
-    let itemsPerRow: CGFloat = 2
+    let itemsPerColumn: CGFloat = 2
+    let itemsPerRow: CGFloat = 3
     let itemSpacing: CGFloat = 5
-    let maxWidth: CGFloat = 150
+//    let maxWidth: CGFloat = 150
     
     override func prepare() {
         super.prepare()
@@ -19,16 +20,19 @@ final class CardCollectionViewLayout: UICollectionViewFlowLayout {
         
         minimumLineSpacing = itemSpacing
         minimumInteritemSpacing = itemSpacing
+        
         scrollDirection = .horizontal
         sectionInsetReference = .fromSafeArea
         sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         
         // Available width used for item sizing = bounds - padding between items.
-        let availableWidth = collectionView.bounds.width - ((itemsPerRow - 1) * itemSpacing)
-        let itemWidth = (availableWidth / itemsPerRow) - itemSpacing * 10
-        itemSize = CGSize(width: min(itemWidth, maxWidth), height: collectionView.bounds.height)
+        let availableWidth = collectionView.bounds.width - ((itemsPerColumn + 1) * itemSpacing)
+        let itemWidth = availableWidth / itemsPerColumn
         
-        let contentInset = (collectionView.bounds.width / 2) - itemSize.width / 2
+        let availableHeight = collectionView.bounds.height - ((itemsPerRow + 1) * itemSpacing)
+        let itemHeight = availableHeight / itemsPerRow
+        
+        itemSize = CGSize(width: itemWidth, height: itemHeight)
         
         collectionView.contentInset = UIEdgeInsets(top: 0,
                                                    left: itemSpacing,

@@ -30,16 +30,12 @@ final class MainViewController: UICollectionViewController {
     }
     
     private func populateData() {
-        let width = view.bounds.width
-        let height = view.bounds.height
+        let width = 400
+        let height = 600
         let randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")!
         
         dataSource = CardCollectionViewDataSource(qos: .userInitiated,
                                                   imageSourceURL: randomImageURL)
-        
-        let startingIndexPaths = (0 ..< 15).map { IndexPath(row: $0, section: 0) }
-        dataSource.createImages(for: startingIndexPaths, collectionView: collectionView)
-//        dataSource.collectionView(collectionView, createOperationsFor: startingIndexPaths)
     }
     
     private func configure() {
