@@ -29,21 +29,6 @@ final class MainViewController: UICollectionViewController {
         constrainViews()
     }
     
-    private func configure() {
-        view.backgroundColor = .white
-        title = "Browse"
-        navigationController?.navigationBar.prefersLargeTitles = true
-        
-        collectionView.backgroundColor = .white
-        collectionView.dataSource = dataSource
-        collectionView.delegate = self
-        collectionView.prefetchDataSource = dataSource
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
-        
-        collectionView.register(CardCollectionViewCell.self,
-                                forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
-    }
-    
     private func populateData() {
         let width = view.bounds.width
         let height = view.bounds.height
@@ -53,7 +38,25 @@ final class MainViewController: UICollectionViewController {
                                                   imageSourceURL: randomImageURL)
         
         let startingIndexPaths = (0 ..< 15).map { IndexPath(row: $0, section: 0) }
-        dataSource.collectionView(collectionView, createOperationsFor: startingIndexPaths)
+        dataSource.createImages(for: startingIndexPaths, collectionView: collectionView)
+//        dataSource.collectionView(collectionView, createOperationsFor: startingIndexPaths)
+    }
+    
+    private func configure() {
+        view.backgroundColor = .white
+        title = "Browse"
+        
+        navigationController?.navigationBar.prefersLargeTitles = true
+        navigationController?.navigationItem.largeTitleDisplayMode = .always
+        
+        collectionView.backgroundColor = .white
+        collectionView.dataSource = dataSource
+        collectionView.delegate = self
+//        collectionView.prefetchDataSource = dataSource
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        
+        collectionView.register(CardCollectionViewCell.self,
+                                forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
     }
     
     private func constrainViews() {

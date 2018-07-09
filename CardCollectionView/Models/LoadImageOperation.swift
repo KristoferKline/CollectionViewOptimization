@@ -8,11 +8,7 @@
 
 import UIKit
 
-protocol LoadImageOperationDelegate {
-    func didRetrieve(image: UIImage)
-}
-
-typealias LoadImageCompletion = ((UIImage) -> Void)
+typealias LoadImageCompletion = ((Data) -> Void)
 
 final class LoadImageOperation: Operation {
     private let imageURL: URL
@@ -26,6 +22,7 @@ final class LoadImageOperation: Operation {
     }
     
     override func main() {
+        print("Executing")
         loadImage(from: imageURL) { (error) in
             guard let error = error else { return }
             print("Ran into an error: \(error.localizedDescription)")
@@ -35,23 +32,9 @@ final class LoadImageOperation: Operation {
     private func loadImage(from imageURL: URL, completion: @escaping (Error?) -> Void) {
         session?.dataTask(with: imageURL) { [weak self] (data, response, error) in
             guard let data = data, error == nil else { return completion(error) }
-            
-            let imageSourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-            guard let imageSource = CGImageSourceCreateWithData(data as NSData, imageSourceOptions) else {
-                return print("Failed to create image source from data")
-            }
-
-            let downsapleOptions = [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceShouldCacheImmediately: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                ] as CFDictionary
-
-            guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsapleOptions) else {
-                return print("Failed to create downsampled image.")
-            }
-
-            self?.completion(UIImage(cgImage: downsampledImage))
+            print("Did retrieve data")
+            self?.completion(data)
         }.resume()
     }
 }
+

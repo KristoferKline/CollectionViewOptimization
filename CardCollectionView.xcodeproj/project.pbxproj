@@ -84,13 +84,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0187F8EE20E7610400A2C954 /* View Controllers */ = {
+		0187F8EE20E7610400A2C954 /* Controllers */ = {
 			isa = PBXGroup;
 			children = (
 				01D9003320DF808100C08287 /* MainViewController.swift */,
 				0187F8EC20E75BFD00A2C954 /* CardPreviewViewController.swift */,
 			);
-			path = "View Controllers";
+			path = Controllers;
 			sourceTree = "<group>";
 		};
 		0187F8EF20E7611600A2C954 /* Models */ = {
@@ -148,7 +148,7 @@
 				01D9003120DF808100C08287 /* AppDelegate.swift */,
 				0187F8EF20E7611600A2C954 /* Models */,
 				0187F8F020E7611C00A2C954 /* Views */,
-				0187F8EE20E7610400A2C954 /* View Controllers */,
+				0187F8EE20E7610400A2C954 /* Controllers */,
 				0187F8F120E7614F00A2C954 /* Utility */,
 			);
 			path = CardCollectionView;
