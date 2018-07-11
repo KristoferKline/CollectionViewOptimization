@@ -21,7 +21,7 @@ final class CardCollectionViewLayout: UICollectionViewFlowLayout {
         minimumLineSpacing = itemSpacing
         minimumInteritemSpacing = itemSpacing
         
-        scrollDirection = .horizontal
+        scrollDirection = .vertical
         sectionInsetReference = .fromSafeArea
         sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
         
@@ -29,14 +29,15 @@ final class CardCollectionViewLayout: UICollectionViewFlowLayout {
         let availableWidth = collectionView.bounds.width - ((itemsPerColumn + 1) * itemSpacing)
         let itemWidth = availableWidth / itemsPerColumn
         
-        let availableHeight = collectionView.bounds.height - ((itemsPerRow + 1) * itemSpacing)
-        let itemHeight = availableHeight / itemsPerRow
+        // Not using right now.
+//        let availableHeight = collectionView.bounds.height - ((itemsPerRow + 3) * itemSpacing)
+//        let itemHeight = availableHeight / itemsPerRow
         
-        itemSize = CGSize(width: itemWidth, height: itemHeight)
+        itemSize = CGSize(width: itemWidth, height: itemWidth * 2)
         
-        collectionView.contentInset = UIEdgeInsets(top: 0,
+        collectionView.contentInset = UIEdgeInsets(top: itemSpacing,
                                                    left: itemSpacing,
-                                                   bottom: 0,
+                                                   bottom: itemSpacing,
                                                    right: itemSpacing)
     }
 }

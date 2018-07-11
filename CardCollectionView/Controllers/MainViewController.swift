@@ -26,41 +26,34 @@ final class MainViewController: UICollectionViewController {
         
         populateData()
         configure()
-        constrainViews()
     }
     
     private func populateData() {
-        let width = 400
-        let height = 600
+        let width = view.bounds.width
+        let height = view.bounds.height
         let randomImageURL = URL(string: "https://picsum.photos/\(width)/\(height)/?random")!
         
         dataSource = CardCollectionViewDataSource(qos: .userInitiated,
                                                   imageSourceURL: randomImageURL)
+        dataSource.loadFirstBatch(collectionView)
     }
     
     private func configure() {
         view.backgroundColor = .white
         title = "Browse"
         
+        navigationController?.navigationBar.isTranslucent = false
+        tabBarController?.tabBar.isTranslucent = false
         navigationController?.navigationBar.prefersLargeTitles = true
         navigationController?.navigationItem.largeTitleDisplayMode = .always
         
         collectionView.backgroundColor = .white
         collectionView.dataSource = dataSource
         collectionView.delegate = self
-//        collectionView.prefetchDataSource = dataSource
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         
         collectionView.register(CardCollectionViewCell.self,
                                 forCellWithReuseIdentifier: CardCollectionViewCell.identifier)
-    }
-    
-    private func constrainViews() {
-        let marginGuide = view.safeAreaLayoutGuide
-        collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
-        collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
-        collectionView.topAnchor.constraint(equalTo: marginGuide.topAnchor).isActive = true
-        collectionView.bottomAnchor.constraint(equalTo: marginGuide.bottomAnchor).isActive = true
     }
     
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {

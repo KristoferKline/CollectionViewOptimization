@@ -21,6 +21,8 @@ extension UIImage {
             kCGImageSourceCreateThumbnailWithTransform: true,
             ] as CFDictionary
         
+        
+        
         guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsapleOptions) else {
             return nil
         }
